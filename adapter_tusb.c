@@ -344,12 +344,34 @@ uint8_t MS_Extended_Feature_Descriptor[] =
 // return false to stall control endpoint (e.g unsupported request)
 bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const *request)
 {
+  uint8_t const desc_type = tu_u16_high(request->wValue);
+  uint8_t const itf = 0;
+
+  // The only data stage we support is for SET_MODE
+  // SET_MODE is used to changed the adapter mode and reboot
+  static uint8_t out_buffer[64];
+  if (stage == CONTROL_STAGE_DATA) {
+    if (request->bRequest == VENDOR_REQUEST_SET_MODE && request->wLength == 1) {
+      if (tud_control_xfer(rhport, request, out_buffer, sizeof(out_buffer))) {
+        uint8_t mode = out_buffer[0];
+        if (mode < INPUT_MODE_MAX && mode != adapter_get_current_mode())
+        {
+          adapter_reboot_memory_u msg = {
+            .adapter_mode = (input_mode_t)mode,
+            .reboot_reason = ADAPTER_REBOOT_REASON_MODECHANGE,
+          };
+          adapter_ll_reboot_with_memory(&msg);
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
   // nothing to with DATA & ACK stage
   if (stage != CONTROL_STAGE_SETUP)
     return true;
-
-  uint8_t const desc_type = tu_u16_high(request->wValue);
-  uint8_t const itf = 0;
 
   switch (request->bmRequestType_bit.type)
   {
@@ -409,6 +431,15 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
         return false;
       }
     }
+
+    case VENDOR_REQUEST_GET_MODE:
+    {
+      uint8_t mode = adapter_get_current_mode();
+      return tud_control_xfer(rhport, request, &mode, 1);
+    }
+
+    case VENDOR_REQUEST_SET_MODE:
+      return tud_control_xfer(rhport, request, &out_buffer, 1);
 
     default:
       break;
