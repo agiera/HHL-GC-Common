@@ -58,6 +58,11 @@ void adapter_mode_cycle(bool forwards)
             _adapter_input_mode -= 1;
     }
 
+    // Save new mode as default
+    settings_set_mode(_adapter_input_mode);
+    settings_save();
+    adapter_ll_save_check();
+
     adapter_reboot_memory_u _mem = {
         .adapter_mode = _adapter_input_mode,
         .reboot_reason = ADAPTER_REBOOT_REASON_MODECHANGE};
