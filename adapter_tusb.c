@@ -283,13 +283,18 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 }
 
 // Vendor Device Class CB for receiving data
-void tud_vendor_rx_cb(uint8_t itf)
+// TinyUSB weak declaration: void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
+void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
 {
+  (void) itf;
   printf("WebUSB Data Received.\n");
-  uint8_t buffer[64] = {0};
-  uint32_t size = 0;
-  tud_vendor_n_read(itf, buffer, 64);
-  webusb_command_processor(buffer);
+  // webusb_command_processor expects a non-const pointer to a 64-byte buffer.
+  // Copy incoming data into a temporary mutable buffer before passing it on.
+  uint8_t tmp[64] = {0};
+  uint16_t len = bufsize;
+  if (len > sizeof(tmp)) len = sizeof(tmp);
+  memcpy(tmp, buffer, len);
+  webusb_command_processor(tmp);
 }
 
 const tusb_desc_webusb_url_t desc_url =
