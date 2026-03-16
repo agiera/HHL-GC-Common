@@ -273,7 +273,7 @@ void command_handler(uint8_t itf, uint8_t command, const uint8_t *data, uint16_t
           printf("0x%x, ", data[16+i]);
           printf("\n");
         }
-        settings_save(false);
+        settings_save();
       }
 
       break;
