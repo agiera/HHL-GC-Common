@@ -360,11 +360,11 @@ bool tud_xinput_n_report(uint8_t instance, void const * report, uint16_t len)
 {
     uint8_t const rhport = 0;
 
-    // Remote wakeup
+    // Remote wakeup: only trigger if host enabled remote wakeup
     if (tud_suspended()) {
-      // Wake up host if we are in suspend mode
-      // and REMOTE_WAKEUP feature is enabled by host
-      tud_remote_wakeup();
+        if (adapter_remote_wakeup_enabled()) {
+            tud_remote_wakeup();
+        }
     }
 
     uint8_t ep_addr = _xinputd_itf[instance].ep_in;
