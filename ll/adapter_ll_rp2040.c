@@ -127,7 +127,8 @@ void adapter_ll_hardware_setup()
     gpio_set_dir(ADAPTER_BUTTON_2, GPIO_IN);
 
     // Handle early USB bootloader stuff
-    if (!gpio_get(ADAPTER_BUTTON_1) && !gpio_get(ADAPTER_BUTTON_2))
+    // TODO: Handle case where there's only one button
+    if (!gpio_get(ADAPTER_BUTTON_1))
     {
         reset_usb_boot(0, 0);
     }
