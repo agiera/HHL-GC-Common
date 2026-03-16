@@ -53,12 +53,16 @@ void xinput_hid_report(joybus_input_s *joybus_data)
 
         data[itf].stick_left_x  = sign_axis((joybus_data[i].stick_left_x));
         data[itf].stick_left_y  = sign_axis((joybus_data[i].stick_left_y));
+
         data[itf].stick_right_x = sign_axis((joybus_data[i].stick_right_x));
         data[itf].stick_right_y = sign_axis((joybus_data[i].stick_right_y));
 
         data[itf].dpad_up       = joybus_data[i].dpad_up;
         data[itf].dpad_down     = joybus_data[i].dpad_down;
-        data[itf].dpad_left     = joybus_data[i].dpad_left;
+
+        // Repurpose dpad left for left bumper
+        data[itf].bumper_l      = joybus_data[i].dpad_left;
+        data[itf].dpad_left     = 0;
         data[itf].dpad_right    = joybus_data[i].dpad_right;
 
         // data.button_guide = joybus_data[i].button_minus;
