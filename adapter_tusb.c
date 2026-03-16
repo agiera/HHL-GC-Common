@@ -378,6 +378,10 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
         uint8_t mode = out_buffer[0];
         if (mode < INPUT_MODE_MAX && mode != adapter_get_current_mode())
         {
+          // Save new mode as default
+          settings_set_mode(mode);
+          settings_save();
+          adapter_ll_save_check();
           adapter_reboot_memory_u msg = {
             .adapter_mode = (input_mode_t)mode,
             .reboot_reason = ADAPTER_REBOOT_REASON_MODECHANGE,
