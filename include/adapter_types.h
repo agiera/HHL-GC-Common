@@ -26,6 +26,7 @@ typedef struct
     bool            adapter_hardware_test;
     input_mode_t    input_mode;
     uint8_t         switch_mac_address[4][6];
+    uint8_t         led_brightness; // 0-255 brightness value
 
 } adapter_settings_s;
 

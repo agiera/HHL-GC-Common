@@ -20,7 +20,18 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
 
 void _rgb_update_all()
 {
-    rgb_itf_update(_rgb_current);
+    // Apply brightness scaling
+    rgb_s scaled[ADAPTER_RGB_COUNT];
+    uint8_t brightness = settings_get_brightness();
+
+    for(uint8_t i = 0; i < ADAPTER_RGB_COUNT; i++)
+    {
+        scaled[i].r = (_rgb_current[i].r * brightness) / 255;
+        scaled[i].g = (_rgb_current[i].g * brightness) / 255;
+        scaled[i].b = (_rgb_current[i].b * brightness) / 255;
+    }
+
+    rgb_itf_update(scaled);
 }
 
 uint32_t _rgb_blend(rgb_s *original, rgb_s *new, float blend)

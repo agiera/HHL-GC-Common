@@ -12,5 +12,7 @@ void settings_save_webindicate();
 void settings_save();
 void settings_set_mode(input_mode_t mode);
 void settings_reset_to_default();
+uint8_t settings_get_brightness();
+void settings_set_brightness(uint8_t brightness);
 
 #endif

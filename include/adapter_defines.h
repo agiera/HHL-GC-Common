@@ -8,7 +8,4 @@
 
 extern const char* global_string_descriptor[];
 
-#define VENDOR_REQUEST_GET_MS_OS_DESCRIPTOR 7
-
-
 #endif

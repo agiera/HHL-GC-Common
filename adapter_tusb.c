@@ -368,8 +368,9 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
   uint8_t const desc_type = tu_u16_high(request->wValue);
   uint8_t const itf = 0;
 
-  // The only data stage we support is for SET_MODE
+  // The only data stage we support is for SET_MODE and SET_BRIGHTNESS
   // SET_MODE is used to changed the adapter mode and reboot
+  // SET_BRIGHTNESS is used to change the LED brightness
   static uint8_t out_buffer[64];
   if (stage == CONTROL_STAGE_DATA) {
     if (request->bRequest == VENDOR_REQUEST_SET_MODE && request->wLength == 1) {
@@ -383,6 +384,23 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
           };
           adapter_ll_reboot_with_memory(&msg);
         }
+        return true;
+      } else {
+        return false;
+      }
+    }
+    if (request->bRequest == VENDOR_REQUEST_SET_BRIGHTNESS && request->wLength == 1) {
+      if (tud_control_xfer(rhport, request, out_buffer, sizeof(out_buffer))) {
+        uint8_t brightness = out_buffer[0];
+        settings_set_brightness(brightness);
+        settings_save();
+        adapter_ll_save_check();
+        uint8_t mode = adapter_get_current_mode();
+        adapter_reboot_memory_u msg = {
+          .adapter_mode = (input_mode_t)mode,
+          .reboot_reason = ADAPTER_REBOOT_REASON_MODECHANGE,
+        };
+        adapter_ll_reboot_with_memory(&msg);
         return true;
       } else {
         return false;
@@ -460,6 +478,26 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
     }
 
     case VENDOR_REQUEST_SET_MODE:
+      return tud_control_xfer(rhport, request, &out_buffer, 1);
+
+    case VENDOR_REQUEST_REBOOT_BOOTLOADER:
+    {
+      // Send response first before rebooting
+      tud_control_status(rhport, request);
+      // Give time for the USB transfer to complete
+      tud_task();
+      // Reboot into bootloader mode
+      adapter_ll_reboot_bootloader();
+      return true;
+    }
+
+    case VENDOR_REQUEST_GET_BRIGHTNESS:
+    {
+      uint8_t brightness = settings_get_brightness();
+      return tud_control_xfer(rhport, request, &brightness, 1);
+    }
+
+    case VENDOR_REQUEST_SET_BRIGHTNESS:
       return tud_control_xfer(rhport, request, &out_buffer, 1);
 
     default:

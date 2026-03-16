@@ -42,6 +42,7 @@ void settings_reset_to_default()
   const adapter_settings_s set = {
     .settings_version = ADAPTER_SETTINGS_VERSION,
     .input_mode = INPUT_MODE_SWPRO,
+    .led_brightness = 255, // Default to full brightness
   };
   memcpy(&global_loaded_settings, &set, sizeof(adapter_settings_s));
   _generate_mac();
@@ -62,4 +63,14 @@ void settings_save_webindicate()
 void settings_set_mode(input_mode_t mode)
 {
   global_loaded_settings.input_mode = mode;
+}
+
+uint8_t settings_get_brightness()
+{
+  return global_loaded_settings.led_brightness;
+}
+
+void settings_set_brightness(uint8_t brightness)
+{
+  global_loaded_settings.led_brightness = brightness;
 }
