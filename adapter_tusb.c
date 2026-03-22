@@ -10,29 +10,7 @@
 #include "tusb.h"
 #include "adapter.h"
 
-// Track USB suspend state and whether remote wakeup was enabled by host
-static volatile bool _usb_suspended = false;
-static volatile bool _usb_remote_wakeup = false;
-
-bool adapter_usb_suspended(void) { return _usb_suspended; }
-bool adapter_remote_wakeup_enabled(void) { return _usb_remote_wakeup; }
-
 /********* TinyUSB HID callbacks ***************/
-
-void tud_suspend_cb(bool remote_wakeup_en)
-{
-  // Record suspend state and whether the host enabled remote wakeup
-  // Avoid rebooting here — rebooting during host suspend can keep USB active
-  // which may prevent the host from completing suspend.
-  _usb_suspended = true;
-  _usb_remote_wakeup = remote_wakeup_en;
-}
-
-void tud_resume_cb(void)
-{
-  _usb_suspended = false;
-  _usb_remote_wakeup = false;
-}
 
 // Invoked when received GET DEVICE DESCRIPTOR
 // Application return pointer to descriptor

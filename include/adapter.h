@@ -21,8 +21,4 @@ bool adapter_usb_start(input_mode_t mode);
 void adapter_main_init();
 void adapter_main_loop();
 
-// USB suspend state helpers
-bool adapter_usb_suspended(void);
-bool adapter_remote_wakeup_enabled(void);
-
 #endif
