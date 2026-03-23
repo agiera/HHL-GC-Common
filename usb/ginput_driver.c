@@ -33,7 +33,7 @@ const uint8_t gc_hid_report_descriptor[] = {
     0x26, 0xFF, 0x00,  //     Logical Maximum (255)
     0x75, 0x08,        //     Report Size (8)
     0x95, 0x24,        //     Report Count (36) -- 4 ports x 9 bytes each, matching gcinput_hid_report
-    0x81, 0x00,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0xC0,              //   End Collection
     0xA1, 0x03,        //   Collection (Report)
     0x85, 0x13,        //     Report ID (19)
