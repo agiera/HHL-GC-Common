@@ -280,7 +280,6 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 // TinyUSB weak declaration: void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
 void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
 {
-  (void) itf;
   printf("WebUSB Data Received.\n");
   // webusb_command_processor expects a non-const pointer to a 64-byte buffer.
   // Copy incoming data into a temporary mutable buffer before passing it on.
@@ -288,6 +287,11 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
   uint16_t len = bufsize;
   if (len > sizeof(tmp)) len = sizeof(tmp);
   memcpy(tmp, buffer, len);
+
+  // Consume data from TinyUSB's internal stream FIFO so the endpoint
+  // is re-armed and can receive the next packet.
+  tud_vendor_n_read_flush(itf);
+
   webusb_command_processor(tmp);
 }
 
