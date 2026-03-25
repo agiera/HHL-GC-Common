@@ -220,6 +220,7 @@ void adapter_comms_task(uint32_t timestamp)
         {
             adapter_usb_unset_clear();
             joybus_itf_poll(&_adapter_joybus_inputs);
+            webusb_joybus_check();
             adapter_usb_report(_adapter_joybus_inputs);
         }
     }

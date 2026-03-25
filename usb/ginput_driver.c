@@ -69,29 +69,28 @@ const tusb_desc_device_t ginput_device_descriptor = {
     .bNumConfigurations = 0x01};
 
 /**** GameCube Adapter Configuration Descriptor ****/
+// Layout: interface 0 = vendor bulk (WebUSB, EP 0x81 IN / 0x01 OUT),
+//         interface 1 = HID (EP 0x82 IN interrupt / 0x02 OUT interrupt).
+// Total: 9 + (9+7+7) + (9+9+7+7) = 64 bytes, 2 interfaces.
 const uint8_t ginput_configuration_descriptor[] = {
     // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, 41, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
+    TUD_CONFIG_DESCRIPTOR(1, 2, 0, 64, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
 
-    // Interface
-    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
+    // Interface 0 — Vendor (WebUSB joybus passthrough), ITF_NUM_VENDOR = 0
+    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_VENDOR_SPECIFIC, 0x00, 0x00, 0x00,
+    // Endpoint 0x81 — Bulk IN, 64 bytes
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0,
+    // Endpoint 0x01 — Bulk OUT, 64 bytes
+    7, TUSB_DESC_ENDPOINT, 0x01, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0,
+
+    // Interface 1 — HID (GC adapter reports)
+    9, TUSB_DESC_INTERFACE, 0x01, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
     // HID Descriptor
     9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_hid_report_descriptor)),
-    // Endpoint Descriptor
-    7,
-    TUSB_DESC_ENDPOINT,
-    0x82,
-    TUSB_XFER_INTERRUPT,
-    U16_TO_U8S_LE(37),
-    8,
-
-    // Endpoint Descriptor
-    7,
-    TUSB_DESC_ENDPOINT,
-    0x01,
-    TUSB_XFER_INTERRUPT,
-    U16_TO_U8S_LE(6),
-    8,
+    // Endpoint 0x82 — Interrupt IN, 37 bytes, 8ms
+    7, TUSB_DESC_ENDPOINT, 0x82, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 8,
+    // Endpoint 0x02 — Interrupt OUT, 6 bytes, 8ms
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
 };
 
 /**** GameCube Adapter SLIPPI Configuration Descriptor ****/
