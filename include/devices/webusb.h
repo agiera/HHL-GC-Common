@@ -6,8 +6,8 @@
 typedef enum
 {
   // Send raw joybus command to a specific port and return the response.
-  // Packet: [0x02, port (0-3), cmd_len (1-8), cmd_byte_0, ...]
-  // Response: [0x02, port, response_byte_0..7, 0x00...]
+  // Packet: [0x02, port (0-3), cmd_len (4 LE), resp_len (4 LE), cmd_bytes...]
+  // Response: [0x02, port, resp_len (4 LE), response_bytes...]
   WEBUSB_CMD_JOYBUS_CMD = 0x02,
 
   // Set FW update mode

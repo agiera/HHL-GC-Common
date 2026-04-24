@@ -13,9 +13,11 @@ enum
   VENDOR_REQUEST_GET_MS_OS_DESCRIPTOR = 7,
   VENDOR_REQUEST_GET_BRIGHTNESS = 8,
   VENDOR_REQUEST_SET_BRIGHTNESS = 9,
+  VENDOR_REQUEST_WEBUSB_CMD = 10,
+  VENDOR_REQUEST_WEBUSB_RESP = 11,
 };
 
-#define ITF_NUM_VENDOR 0
+#define ITF_NUM_VENDOR 1
 
 extern uint8_t const desc_bos[];
 extern uint8_t const desc_ms_os_20[];

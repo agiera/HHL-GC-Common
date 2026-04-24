@@ -280,19 +280,40 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 // TinyUSB weak declaration: void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
 void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
 {
-  printf("WebUSB Data Received.\n");
-  // webusb_command_processor expects a non-const pointer to a 64-byte buffer.
-  // Copy incoming data into a temporary mutable buffer before passing it on.
-  uint8_t tmp[64] = {0};
-  uint16_t len = bufsize;
-  if (len > sizeof(tmp)) len = sizeof(tmp);
-  memcpy(tmp, buffer, len);
+  // USB Full Speed bulk max packet = 64 bytes.  Commands up to 132 bytes
+  // (4-byte header + 128 cmd) arrive as multiple USB packets.  Accumulate
+  // data until the full command is present before processing.
+  static uint8_t cmd_buf[132];
+  static uint16_t cmd_pos = 0;
 
-  // Consume data from TinyUSB's internal stream FIFO so the endpoint
-  // is re-armed and can receive the next packet.
-  tud_vendor_n_read_flush(itf);
+  // Read available data from TinyUSB's FIFO into our accumulation buffer.
+  uint16_t space = sizeof(cmd_buf) - cmd_pos;
+  uint16_t n = tud_vendor_n_read(itf, cmd_buf + cmd_pos, space);
+  cmd_pos += n;
 
-  webusb_command_processor(tmp);
+  if (cmd_pos < 1) return;  // need at least the command byte
+
+  uint16_t total_needed;
+  if (cmd_buf[0] == WEBUSB_CMD_JOYBUS_CMD) {
+    // Joybus command: [0x02, port, cmd_len, resp_len, cmd_bytes...]
+    if (cmd_pos < 4) return;  // wait for full header
+    total_needed = 4 + (uint16_t)cmd_buf[2];
+    if (total_needed > sizeof(cmd_buf)) {
+      // Invalid cmd_len — discard
+      cmd_pos = 0;
+      tud_vendor_n_read_flush(itf);
+      return;
+    }
+  } else {
+    // Non-joybus commands (FW_SET, FW_GET, SAVEALL) are ≤64 bytes — process immediately
+    total_needed = cmd_pos;
+  }
+
+  if (cmd_pos < total_needed) return;  // wait for more USB packets
+
+  printf("WebUSB Data Received (%u bytes).\n", cmd_pos);
+  webusb_command_processor(cmd_buf);
+  cmd_pos = 0;
 }
 
 const tusb_desc_webusb_url_t desc_url =
@@ -308,7 +329,7 @@ uint8_t MS_OS_10_CompatibleID_Descriptor[] = {
     0x04, 0x00,                                     // WORD (LE)	 Compatibility ID Descriptor index (0x0004)
     0x01,                                           // BYTE	 Number of sections (1)
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,       // 7 BYTES	 Reserved
-    0x00,                                           //	 BYTE	 Interface Number (Interface #0)
+    0x01,                                           //	 BYTE	 Interface Number (Interface #1)
     0x01,                                           //	 BYTE	 Reserved
     0x57, 0x49, 0x4E, 0x55, 0x53, 0x42, 0x00, 0x00, // 8 BYTES ASCII String Compatible ID ("WINUSB\0\0")
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 BYTES ASCII String	 Sub-Compatible ID (unused)
@@ -354,6 +375,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
   // SET_MODE is used to changed the adapter mode and reboot
   // SET_BRIGHTNESS is used to change the LED brightness
   static uint8_t out_buffer[64];
+  static uint8_t webusb_ctrl_buf[132];
   if (stage == CONTROL_STAGE_DATA) {
     if (request->bRequest == VENDOR_REQUEST_SET_MODE && request->wLength == 1) {
       if (tud_control_xfer(rhport, request, out_buffer, sizeof(out_buffer))) {
@@ -391,6 +413,11 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
       } else {
         return false;
       }
+    }
+    if (request->bRequest == VENDOR_REQUEST_WEBUSB_CMD) {
+      // Data has been received into webusb_ctrl_buf — process the command
+      webusb_command_processor(webusb_ctrl_buf);
+      return true;
     }
   }
 
@@ -485,6 +512,30 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 
     case VENDOR_REQUEST_SET_BRIGHTNESS:
       return tud_control_xfer(rhport, request, &out_buffer, 1);
+
+    // WebUSB command via control transfer (replaces bulk endpoint)
+    // Host sends: controlTransferOut(request=10, value=0, index=0, data=cmd_bytes)
+    case VENDOR_REQUEST_WEBUSB_CMD:
+    {
+      uint16_t len = tu_min16(request->wLength, sizeof(webusb_ctrl_buf));
+      return tud_control_xfer(rhport, request, webusb_ctrl_buf, len);
+    }
+
+    // WebUSB response via control transfer
+    // Host sends: controlTransferIn(request=11, value=0, index=0, length=N)
+    case VENDOR_REQUEST_WEBUSB_RESP:
+    {
+      extern uint8_t _webusb_out_buffer[];
+      extern volatile uint8_t _webusb_response_len;
+      uint8_t rlen = _webusb_response_len;
+      if (rlen == 0) {
+        // No response ready — return 0 bytes
+        return tud_control_xfer(rhport, request, NULL, 0);
+      }
+      _webusb_response_len = 0;  // consumed
+      uint16_t len = tu_min16(request->wLength, rlen);
+      return tud_control_xfer(rhport, request, _webusb_out_buffer, len);
+    }
 
     default:
       break;

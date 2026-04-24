@@ -69,54 +69,49 @@ const tusb_desc_device_t ginput_device_descriptor = {
     .bNumConfigurations = 0x01};
 
 /**** GameCube Adapter Configuration Descriptor ****/
-// Layout: interface 0 = vendor bulk (WebUSB, EP 0x81 IN / 0x01 OUT),
-//         interface 1 = HID (EP 0x82 IN interrupt / 0x02 OUT interrupt).
-// Total: 9 + (9+7+7) + (9+9+7+7) = 64 bytes, 2 interfaces.
+// Layout: interface 0 = HID (EP 0x81 IN interrupt / 0x02 OUT interrupt),
+//         interface 1 = vendor (WebUSB, no endpoints — uses control xfers).
+// HID endpoints match the real Nintendo WUP-028 adapter.
+// Vendor interface has 0 endpoints so Dolphin/Slippi endpoint scanning
+// doesn't pick up non-HID endpoints (it uses the LAST endpoints found).
+// Total: 9 + (9+9+7+7) + 9 = 50 bytes, 2 interfaces.
 const uint8_t ginput_configuration_descriptor[] = {
     // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 2, 0, 64, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
+    TUD_CONFIG_DESCRIPTOR(1, 2, 0, 50, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
 
-    // Interface 0 — Vendor (WebUSB joybus passthrough), ITF_NUM_VENDOR = 0
-    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_VENDOR_SPECIFIC, 0x00, 0x00, 0x00,
-    // Endpoint 0x81 — Bulk IN, 64 bytes
-    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0,
-    // Endpoint 0x01 — Bulk OUT, 64 bytes
-    7, TUSB_DESC_ENDPOINT, 0x01, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0,
-
-    // Interface 1 — HID (GC adapter reports)
-    9, TUSB_DESC_INTERFACE, 0x01, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
-    // HID Descriptor
-    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_hid_report_descriptor)),
-    // Endpoint 0x82 — Interrupt IN, 37 bytes, 8ms
-    7, TUSB_DESC_ENDPOINT, 0x82, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 8,
-    // Endpoint 0x02 — Interrupt OUT, 6 bytes, 8ms
-    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
-};
-
-/**** GameCube Adapter SLIPPI Configuration Descriptor ****/
-const uint8_t ginputslippi_configuration_descriptor[] = {
-    // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, 41, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
-
-    // Interface
+    // Interface 0 — HID (GC adapter reports)
     9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
     // HID Descriptor
     9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_hid_report_descriptor)),
-    // Endpoint Descriptor
-    7,
-    TUSB_DESC_ENDPOINT,
-    0x82,
-    TUSB_XFER_INTERRUPT,
-    U16_TO_U8S_LE(37),
-    1,
+    // Endpoint 0x81 — Interrupt IN, 37 bytes, 8ms
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 8,
+    // Endpoint 0x02 — Interrupt OUT, 6 bytes, 8ms
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 8,
 
-    // Endpoint Descriptor
-    7,
-    TUSB_DESC_ENDPOINT,
-    0x01,
-    TUSB_XFER_INTERRUPT,
-    U16_TO_U8S_LE(6),
-    1,
+    // Interface 1 — Vendor (WebUSB identification, no data endpoints)
+    9, TUSB_DESC_INTERFACE, 0x01, 0x00, 0x00, TUSB_CLASS_VENDOR_SPECIFIC, 0x00, 0x00, 0x00,
+};
+
+/**** GameCube Adapter SLIPPI Configuration Descriptor ****/
+// Layout: interface 0 = HID (EP 0x81 IN interrupt / 0x02 OUT interrupt, 1ms),
+//         interface 1 = vendor (WebUSB, no endpoints — uses control xfers).
+// HID endpoints match the real Nintendo WUP-028 adapter.
+// Total: 9 + (9+9+7+7) + 9 = 50 bytes, 2 interfaces.
+const uint8_t ginputslippi_configuration_descriptor[] = {
+    // Configuration number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, 2, 0, 50, TUSB_DESC_CONFIG_ATT_SELF_POWERED, 500),
+
+    // Interface 0 — HID (GC adapter reports)
+    9, TUSB_DESC_INTERFACE, 0x00, 0x00, 0x02, TUSB_CLASS_HID, 0x00, 0x00, 0x00,
+    // HID Descriptor
+    9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0110), 0, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(sizeof(gc_hid_report_descriptor)),
+    // Endpoint 0x81 — Interrupt IN, 37 bytes, 1ms
+    7, TUSB_DESC_ENDPOINT, 0x81, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(37), 1,
+    // Endpoint 0x02 — Interrupt OUT, 6 bytes, 1ms
+    7, TUSB_DESC_ENDPOINT, 0x02, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(6), 1,
+
+    // Interface 1 — Vendor (WebUSB identification, no data endpoints)
+    9, TUSB_DESC_INTERFACE, 0x01, 0x00, 0x00, TUSB_CLASS_VENDOR_SPECIFIC, 0x00, 0x00, 0x00,
 };
 
 
@@ -228,6 +223,9 @@ void ginputd_reset(uint8_t rhport)
 uint16_t ginputd_open(uint8_t rhport, tusb_desc_interface_t const * desc_itf, uint16_t max_len)
 {
   TU_VERIFY((adapter_get_current_mode() == INPUT_MODE_SLIPPI) || (adapter_get_current_mode() == INPUT_MODE_GCADAPTER));
+
+  // Only claim HID interfaces; let the built-in vendor driver handle vendor interfaces
+  TU_VERIFY(desc_itf->bInterfaceClass == TUSB_CLASS_HID, 0);
 
   // len = interface + hid + n*endpoints
   uint16_t const drv_len = (uint16_t) (sizeof(tusb_desc_interface_t) + sizeof(tusb_hid_descriptor_hid_t) +
