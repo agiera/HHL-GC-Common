@@ -505,3 +505,18 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
   // stall unknown request
   return false;
 }
+
+// Invoked when usb bus is suspended
+// remote_wakeup_en : if host allow us to perform remote wakeup
+// Within 7ms, device must draw an idealized current of less than 2.5 mA from bus
+void tud_suspend_cb(bool remote_wakeup_en)
+{
+  (void) remote_wakeup_en;
+  rgb_blank();
+}
+
+// Invoked when usb bus is resumed
+void tud_resume_cb(void)
+{
+  rgb_set_dirty();
+}

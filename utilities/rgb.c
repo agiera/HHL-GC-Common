@@ -115,6 +115,16 @@ void rgb_set_instant(uint32_t color)
 
 }
 
+void rgb_blank()
+{
+    for(uint8_t i = 0; i < ADAPTER_RGB_COUNT; i++)
+    {
+        _rgb_last[i].color = 0;
+        _rgb_current[i].color = 0;
+    }
+    _rgb_update_all();
+}
+
 // Set all RGBs to one color
 void rgb_set_all(uint32_t color)
 {
