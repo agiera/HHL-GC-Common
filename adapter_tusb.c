@@ -277,13 +277,13 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 }
 
 // Vendor Device Class CB for receiving data
-// TinyUSB weak declaration: void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
-void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
+// TinyUSB callback signature in pico-sdk 1.5.1: void tud_vendor_rx_cb(uint8_t itf)
+void tud_vendor_rx_cb(uint8_t itf)
 {
-  // USB Full Speed bulk max packet = 64 bytes.  Commands up to 132 bytes
-  // (4-byte header + 128 cmd) arrive as multiple USB packets.  Accumulate
+  // USB Full Speed bulk max packet = 64 bytes. Commands can span packets.
+  // (6-byte header + up to 1024 cmd) arrive as multiple USB packets.  Accumulate
   // data until the full command is present before processing.
-  static uint8_t cmd_buf[132];
+  static uint8_t cmd_buf[1030];
   static uint16_t cmd_pos = 0;
 
   // Read available data from TinyUSB's FIFO into our accumulation buffer.
@@ -295,9 +295,10 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
 
   uint16_t total_needed;
   if (cmd_buf[0] == WEBUSB_CMD_JOYBUS_CMD) {
-    // Joybus command: [0x02, port, cmd_len, resp_len, cmd_bytes...]
-    if (cmd_pos < 4) return;  // wait for full header
-    total_needed = 4 + (uint16_t)cmd_buf[2];
+    // Joybus command: [0x02, port, cmd_len_lo, cmd_len_hi, resp_len_lo, resp_len_hi, cmd_bytes...]
+    if (cmd_pos < 6) return;  // wait for full header
+    uint16_t cmd_len = (uint16_t)cmd_buf[2] | ((uint16_t)cmd_buf[3] << 8);
+    total_needed = 6 + cmd_len;
     if (total_needed > sizeof(cmd_buf)) {
       // Invalid cmd_len — discard
       cmd_pos = 0;
@@ -375,7 +376,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
   // SET_MODE is used to changed the adapter mode and reboot
   // SET_BRIGHTNESS is used to change the LED brightness
   static uint8_t out_buffer[64];
-  static uint8_t webusb_ctrl_buf[132];
+  static uint8_t webusb_ctrl_buf[1030];
   if (stage == CONTROL_STAGE_DATA) {
     if (request->bRequest == VENDOR_REQUEST_SET_MODE && request->wLength == 1) {
       if (tud_control_xfer(rhport, request, out_buffer, sizeof(out_buffer))) {
@@ -526,8 +527,8 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
     case VENDOR_REQUEST_WEBUSB_RESP:
     {
       extern uint8_t _webusb_out_buffer[];
-      extern volatile uint8_t _webusb_response_len;
-      uint8_t rlen = _webusb_response_len;
+      extern volatile uint16_t _webusb_response_len;
+      uint16_t rlen = _webusb_response_len;
       if (rlen == 0) {
         // No response ready — return 0 bytes
         return tud_control_xfer(rhport, request, NULL, 0);

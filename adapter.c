@@ -216,14 +216,22 @@ void adapter_comms_task(uint32_t timestamp)
 
     if( adapter_usb_is_clear(timestamp) )
     {
-        if(interval_run(timestamp, _adapter_interval, &_i_state))
+        // Bypass the polling interval gate when a WebUSB raw command is queued
+        // so it fires immediately instead of waiting up to one full poll cycle
+        // (~7.6 ms).  Once dispatched the next iteration falls back to the
+        // normal cadence.
+        bool raw_pending = joybus_itf_has_raw_pending();
+        if (raw_pending || interval_run(timestamp, _adapter_interval, &_i_state))
         {
             adapter_usb_unset_clear();
             joybus_itf_poll(&_adapter_joybus_inputs);
-            webusb_joybus_check();
             adapter_usb_report(_adapter_joybus_inputs);
         }
     }
+
+    // Check for raw-cmd responses every loop, not just on the polling tick,
+    // so display-list / WebUSB transfers complete with minimum latency.
+    webusb_joybus_check();
     
     #if (ADAPTER_MCU_TYPE == MCU_TYPE_RP2040)
     tud_task();
