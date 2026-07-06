@@ -1,6 +1,10 @@
 #include "adapter_settings.h"
 
-adapter_settings_s global_loaded_settings = {0};
+adapter_settings_s global_loaded_settings = {
+  .settings_version = ADAPTER_SETTINGS_VERSION,
+  .input_mode = INPUT_MODE_SWPRO,
+  .led_brightness = 255,
+};
 
 // Internal functions for command processing
 void _generate_mac()
